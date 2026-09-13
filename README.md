@@ -1,2 +1,757 @@
-# Leledelivery
-um site para o lele
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lelê Lanches — Pedidos</title>
+<style>
+:root{--red:#e60000;--dark:#191919;--bg:#f5f5f5;--card:#fff;--muted:#666}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#222}
+header{background:var(--red);color:#fff;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{margin:0;font-size:25px}header small{opacity:.9}
+nav{display:flex;gap:8px;background:#fff;padding:10px 16px;border-bottom:1px solid #ddd;position:sticky;top:0;z-index:5}
+nav button{border:0;background:#eee;padding:11px 15px;border-radius:8px;font-weight:bold;cursor:pointer}
+nav button.active{background:var(--red);color:#fff}
+main{max-width:1250px;margin:18px auto;padding:0 14px}.page{display:none}.page.active{display:block}
+.grid{display:grid;grid-template-columns:1.25fr .85fr;gap:16px}.card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 2px 9px #00000012}
+h2{margin:0 0 14px}h3{margin:16px 0 8px}.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
+.product{background:#fff;border:1px solid #ddd;border-radius:9px;padding:11px;text-align:left;cursor:pointer}.product:hover{border-color:var(--red);box-shadow:0 1px 5px #0002}
+.product b{display:block}.price{color:var(--red);font-weight:bold;margin-top:5px}
+select,input,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:7px;font-size:14px}
+label{display:block;font-weight:bold;font-size:13px;margin:9px 0 4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cart-item{border-bottom:1px solid #eee;padding:9px 0}.cart-item strong{display:block}
+.qty{display:flex;align-items:center;gap:7px;margin-top:5px}.qty button{width:29px;height:29px;border:0;border-radius:6px;background:#eee;cursor:pointer}
+.total{font-size:22px;font-weight:bold;text-align:right;margin:15px 0}.btn{border:0;border-radius:8px;padding:11px 15px;font-weight:bold;cursor:pointer;min-height:42px}.primary{background:var(--red);color:#fff}.dark{background:var(--dark);color:#fff}.light{background:#eee}.danger{background:#b00000;color:#fff}.group-btn{min-width:125px;text-align:center}.group-btn.active-group{background:var(--red);color:#fff}.order-actions .btn{min-width:112px;text-align:center}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.orders{display:grid;gap:10px}.order{background:#fff;border-radius:10px;padding:13px;border-left:6px solid var(--red);box-shadow:0 2px 8px #00000012}
+.order-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.badge{padding:5px 8px;border-radius:999px;background:#eee;font-size:12px;font-weight:bold}
+.order ul{margin:8px 0;padding-left:20px}.muted{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#fff;border-radius:10px;padding:15px}.stat b{font-size:23px;display:block;margin-top:5px}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:20;align-items:center;justify-content:center;padding:15px}
+.modal.show{display:flex}.modal-box{background:#fff;border-radius:13px;padding:20px;width:min(520px,100%);max-height:90vh;overflow:auto}
+.checks{display:grid;gap:7px;margin:10px 0}.check{display:flex;align-items:center;gap:8px;font-weight:normal;background:#f7f7f7;padding:9px;border-radius:7px}
+.check input{width:auto}.item-note{font-size:12px;color:#666;margin-top:3px}.item-add{font-size:12px;color:#333;margin-top:3px}
+.menu-row{display:grid;grid-template-columns:1.5fr .7fr .8fr auto;gap:8px;align-items:end;border-bottom:1px solid #eee;padding:12px 0}
+.menu-row .mini-label{font-size:11px;color:#666;margin-bottom:3px}
+@media(max-width:700px){.menu-row{grid-template-columns:1fr 1fr}.menu-row .menu-name{grid-column:1/-1}}
+
+@media(max-width:850px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+@media print{nav,header,.no-print{display:none!important}.page{display:block!important}.order{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header><div><h1>🍔 Lelê Lanches</h1><small>Sistema de pedidos</small></div><button class="btn light" onclick="window.print()">🖨 Imprimir</button></header>
+<nav>
+<button class="tab active" onclick="showPage('novo',this)">➕ Novo pedido</button>
+<button class="tab" onclick="showPage('pedidos',this)">📋 Pedidos</button>
+<button class="tab" onclick="showPage('relatorio',this)">📊 Relatório</button>
+<button class="tab" onclick="showPage('clientes',this)">👥 Clientes</button>
+<button class="tab" onclick="showPage('cardapio',this)">⚙️ Cardápio</button>
+</nav>
+
+<main>
+<section id="novo" class="page active">
+<div class="grid">
+<div class="card">
+<h2>Novo pedido</h2>
+<div class="card" style="background:#fff7f7;border:1px solid #f0d0d0;margin-bottom:12px">
+<label>Buscar cliente já cadastrado</label>
+<div class="row">
+<div><input id="clienteBusca" placeholder="Digite nome ou telefone" oninput="buscarClientes()"></div>
+<div><select id="clienteResultados" onchange="selecionarCliente()"><option value="">Selecione um cliente</option></select></div>
+</div>
+</div>
+<div class="row">
+<div><label>Nome do cliente</label><input id="nome" placeholder="Ex.: Maria"></div>
+<div><label>Telefone</label><input id="telefone" placeholder="WhatsApp"></div>
+</div>
+<div class="row">
+<div><label>Tipo</label><select id="tipo" onchange="toggleEndereco()"><option>Entrega</option><option>Retirada</option></select></div>
+<div><label>Pagamento</label><select id="pagamento" onchange="toggleRecebido();renderCart()"><option>Pix</option><option>Dinheiro</option><option>Cartão</option><option>A combinar</option></select></div>
+</div>
+<div id="recebidoBox" class="row" style="display:none">
+<div><label>Valor recebido</label><input id="recebido" type="number" min="0" step=".01" value="0" oninput="renderCart()"></div>
+<div><label>Troco</label><input id="troco" readonly style="background:#eee" value="R$ 0,00"></div>
+</div>
+<div id="enderecoBox"><label>Endereço</label><input id="endereco" placeholder="Rua, número, bairro"></div>
+<label>Observações</label><textarea id="obs" rows="2" placeholder="Ex.: sem tomate"></textarea>
+<h3>Cardápio</h3>
+<div class="actions no-print" style="margin-bottom:10px">
+<button type="button" id="groupBtn-lanches" class="btn group-btn active-group" onclick="setGroup('lanches')">🍔 Lanches</button>
+<button type="button" id="groupBtn-porcoes" class="btn group-btn" onclick="setGroup('porcoes')">🍟 Porções</button>
+<button type="button" id="groupBtn-bebidas" class="btn group-btn" onclick="setGroup('bebidas')">🥤 Bebidas</button>
+</div>
+<div id="groupTitle" style="font-weight:bold;margin:8px 0 10px">🍔 Lanches</div>
+<div id="products" class="products"></div>
+</div>
+
+<div class="card">
+<h2>Pedido atual</h2>
+<div id="cart"><p class="muted">Clique nos produtos para adicionar.</p></div>
+<div class="row"><div><label>Taxa de entrega</label><input id="taxa" type="number" min="0" step=".01" value="0" oninput="renderCart()"></div><div><label>Desconto</label><input id="desconto" type="number" min="0" step=".01" value="0" oninput="renderCart()"></div></div>
+<div class="total">Total: R$ <span id="total">0,00</span></div>
+<div class="actions"><button type="button" id="saveBtn" class="btn primary" onclick="salvarPedido(); return false;">Salvar pedido</button><button class="btn light" onclick="limpar()">Limpar</button></div>
+</div>
+</div>
+</section>
+
+<section id="pedidos" class="page">
+<div class="card"><div class="actions no-print"><input id="busca" placeholder="Buscar cliente ou número..." oninput="renderOrders()" style="max-width:350px"><button class="btn danger" onclick="apagarTodos()">Apagar todos</button></div><h2 style="margin-top:15px">Pedidos</h2><div id="orders" class="orders"></div></div>
+</section>
+
+<section id="relatorio" class="page">
+<div class="stats">
+<div class="stat">Pedidos hoje<b id="sPedidos">0</b></div>
+<div class="stat">Faturamento<b id="sFat">R$ 0,00</b></div>
+<div class="stat">Ticket médio<b id="sTicket">R$ 0,00</b></div>
+<div class="stat">Em preparo<b id="sPrep">0</b></div>
+</div>
+<div class="card" style="margin-top:15px"><h2>Resumo por pagamento</h2><div id="pagResumo"></div></div>
+</section>
+
+
+<section id="cardapio" class="page">
+<div class="card">
+<h2>⚙️ Editar cardápio</h2>
+<p class="muted">Altere nomes, preços e categorias. As mudanças ficam salvas neste computador.</p>
+
+<div class="row">
+<div>
+<label>Nome do produto</label>
+<input id="menuNome" placeholder="Ex.: X Bacon">
+</div>
+<div>
+<label>Preço (R$)</label>
+<input id="menuPreco" type="number" min="0" step=".01" placeholder="0,00">
+</div>
+</div>
+<div class="row">
+<div>
+<label>Categoria</label>
+<select id="menuGrupo">
+<option value="lanches">🍔 Lanches</option>
+<option value="porcoes">🍟 Porções</option>
+<option value="bebidas">🥤 Bebidas</option>
+</select>
+</div>
+<div style="display:flex;align-items:end">
+<button class="btn primary" type="button" onclick="adicionarProduto()">➕ Adicionar produto</button>
+</div>
+</div>
+
+<div class="actions no-print" style="margin:15px 0">
+<button class="btn dark" type="button" onclick="restaurarCardapio()">↩️ Restaurar cardápio original</button>
+</div>
+
+<div id="menuEditor"></div>
+</div>
+</section>
+
+<section id="clientes" class="page">
+<div class="card">
+<h2>Clientes cadastrados</h2>
+<div class="actions no-print" style="margin-bottom:12px">
+<input id="buscaClientesLista" placeholder="Buscar nome ou telefone..." oninput="renderClients()" style="max-width:350px">
+</div>
+<div id="clientsList"></div>
+</div>
+</section>
+
+</main>
+<div id="customModal" class="modal">
+<div class="modal-box">
+<h2 id="modalTitle">Personalizar produto</h2>
+<div id="modalPrice" class="price"></div>
+<label>Quantidade</label><input id="modalQty" type="number" min="1" value="1">
+<div id="modalAdds"></div>
+<label>Observação deste item</label>
+<textarea id="modalObs" rows="3" placeholder="Ex.: sem tomate, sem maionese, bem passado..."></textarea>
+<div class="actions" style="margin-top:14px">
+<button class="btn primary" onclick="confirmAdd()">Adicionar ao pedido</button>
+<button class="btn light" onclick="closeModal()">Cancelar</button>
+</div>
+</div></div>
+
+<script>
+const menuPadrao=[
+{name:"X Burger",price:25,group:"lanches"},{name:"X Burger Duplo c/ Cheddar e Bacon",price:42,group:"lanches"},
+{name:"X Burger Duplo c/ Cheddar",price:35,group:"lanches"},{name:"X Salada",price:30,group:"lanches"},
+{name:"X Egg",price:32,group:"lanches"},{name:"X Galinha",price:34,group:"lanches"},
+{name:"X Coração",price:35,group:"lanches"},{name:"X Mignon",price:36,group:"lanches"},
+{name:"X Calabresa",price:32,group:"lanches"},{name:"X Bacon",price:38,group:"lanches"},
+{name:"X Tudo",price:55,group:"lanches"},{name:"X Tudo Aberto",price:70,group:"lanches"},
+{name:"Misto Quente",price:22,group:"lanches"},{name:"Queijo Quente",price:23,group:"lanches"},
+{name:"Dog Tradicional",price:20,group:"lanches"},{name:"Dog Prensado",price:23,group:"lanches"},
+{name:"Dog Prensado de Frango",price:30,group:"lanches"},
+{name:"Calabresa — porção 800g",price:60,group:"porcoes"},{name:"Peito de Frango — porção 800g",price:70,group:"porcoes"},
+{name:"Coração — porção 800g",price:75,group:"porcoes"},{name:"Mista",price:120,group:"porcoes"},
+{name:"Batata Frita 1kg",price:40,group:"porcoes"},{name:"Batata Frita 500g",price:30,group:"porcoes"},
+{name:"Batata Frita c/ Bacon e Queijo 500g",price:50,group:"porcoes"},
+{name:"Refrigerante lata 350ml",price:8,group:"bebidas"},{name:"Coca-Cola lata Zero 350ml",price:9,group:"bebidas"},
+{name:"Refrigerante 2 litros",price:20,group:"bebidas"},{name:"Refrigerante 1 litro",price:10,group:"bebidas"},
+{name:"Refrigerante 600ml",price:10,group:"bebidas"},{name:"Coca-Cola 600ml Zero",price:12,group:"bebidas"},
+{name:"Água 500ml",price:5,group:"bebidas"},{name:"Cerveja Heineken 350ml",price:12,group:"bebidas"},
+{name:"Cerveja Brahma 350ml",price:8,group:"bebidas"}
+];
+let menu=JSON.parse(localStorage.getItem('lele_menu')||'null')||menuPadrao.map(x=>({...x}));
+let cart=[];
+let orders=JSON.parse(localStorage.getItem('lele_orders')||'[]').map(o=>({...o,id:String(o.id)}));
+let customers=JSON.parse(localStorage.getItem('lele_customers')||'[]');
+let currentGroup='lanches';
+let editingId=null;
+localStorage.setItem('lele_orders',JSON.stringify(orders));
+
+
+function salvarMenu(){localStorage.setItem('lele_menu',JSON.stringify(menu))}
+function renderMenuEditor(){
+  const box=document.getElementById('menuEditor'); if(!box)return;
+  const grupos=[
+    ['lanches','🍔 Lanches'],
+    ['porcoes','🍟 Porções'],
+    ['bebidas','🥤 Bebidas']
+  ];
+  box.innerHTML='';
+  grupos.forEach(([g,titulo])=>{
+    const h=document.createElement('h3'); h.textContent=titulo; box.appendChild(h);
+    menu.filter(x=>x.group===g).forEach((prod,idx)=>{
+      const realIndex=menu.indexOf(prod);
+      const row=document.createElement('div'); row.className='menu-row';
+      row.innerHTML=`
+        <div class="menu-name"><div class="mini-label">Nome</div><input value="${esc(prod.name)}" id="mn${realIndex}"></div>
+        <div><div class="mini-label">Preço</div><input type="number" min="0" step=".01" value="${Number(prod.price)}" id="mp${realIndex}"></div>
+        <div><div class="mini-label">Categoria</div><select id="mg${realIndex}">
+          <option value="lanches" ${g==='lanches'?'selected':''}>Lanches</option>
+          <option value="porcoes" ${g==='porcoes'?'selected':''}>Porções</option>
+          <option value="bebidas" ${g==='bebidas'?'selected':''}>Bebidas</option>
+        </select></div>
+        <div class="actions">
+          <button class="btn primary" type="button" onclick="salvarProduto(${realIndex})">💾 Salvar</button>
+          <button class="btn danger" type="button" onclick="excluirProduto(${realIndex})">🗑️</button>
+        </div>`;
+      box.appendChild(row);
+    });
+  });
+}
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function salvarProduto(i){
+  const nome=document.getElementById('mn'+i).value.trim();
+  const preco=Number(document.getElementById('mp'+i).value);
+  const grupo=document.getElementById('mg'+i).value;
+  if(!nome){alert('Digite o nome do produto.');return}
+  if(!Number.isFinite(preco)||preco<0){alert('Digite um preço válido.');return}
+  menu[i]={name:nome,price:preco,group:grupo};
+  salvarMenu(); renderProducts(); renderMenuEditor();
+  alert('Produto atualizado!');
+}
+function adicionarProduto(){
+  const nome=document.getElementById('menuNome').value.trim();
+  const preco=Number(document.getElementById('menuPreco').value);
+  const grupo=document.getElementById('menuGrupo').value;
+  if(!nome){alert('Digite o nome do produto.');return}
+  if(!Number.isFinite(preco)||preco<0){alert('Digite um preço válido.');return}
+  menu.push({name:nome,price:preco,group:grupo});
+  salvarMenu(); renderProducts(); renderMenuEditor();
+  document.getElementById('menuNome').value='';
+  document.getElementById('menuPreco').value='';
+  alert('Produto adicionado ao cardápio!');
+}
+function excluirProduto(i){
+  if(!confirm('Excluir "'+menu[i].name+'"?'))return;
+  menu.splice(i,1); salvarMenu(); renderProducts(); renderMenuEditor();
+}
+function restaurarCardapio(){
+  if(!confirm('Restaurar o cardápio original? Suas alterações de nomes e preços serão perdidas.'))return;
+  menu=menuPadrao.map(x=>({...x})); salvarMenu(); renderProducts(); renderMenuEditor();
+  alert('Cardápio original restaurado!');
+}
+
+function br(v){return Number(v).toFixed(2).replace('.',',')}
+function showPage(id,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='pedidos')renderOrders();if(id==='relatorio')renderReport();if(id==='clientes')renderClients();if(id==='cardapio')renderMenuEditor()}
+function toggleEndereco(){document.getElementById('enderecoBox').style.display=document.getElementById('tipo').value==='Entrega'?'block':'none'}
+function toggleRecebido(){const box=document.getElementById('recebidoBox');if(!box)return;box.style.display=document.getElementById('pagamento').value==='Dinheiro'?'':'none'}
+function setGroup(g){
+  currentGroup=g;
+  const titles={lanches:'🍔 Lanches',porcoes:'🍟 Porções',bebidas:'🥤 Bebidas'};
+  document.getElementById('groupTitle').textContent=titles[g];
+  document.querySelectorAll('.group-btn').forEach(btn=>btn.classList.remove('active-group'));
+  const active=document.getElementById('groupBtn-'+g);
+  if(active)active.classList.add('active-group');
+  renderProducts();
+}
+function renderProducts(){let p=document.getElementById('products');p.innerHTML='';menu.filter(x=>x.group===currentGroup).forEach(x=>{let d=document.createElement('button');d.className='product';d.innerHTML='<b>'+x.name+'</b><span class="price">R$ '+br(x.price)+'</span>'+(x.group!=='bebidas'?'<span class="muted" style="display:block;margin-top:5px">Adicionar observação/adicionais</span>':'');d.onclick=()=>openModal(x);p.appendChild(d)})}
+let modalProduct=null;
+function openModal(product){modalProduct=product;document.getElementById('modalTitle').textContent=product.name;document.getElementById('modalPrice').textContent='R$ '+br(product.price);document.getElementById('modalQty').value=1;document.getElementById('modalObs').value='';let box=document.getElementById('modalAdds');if(product.group==='bebidas'){box.innerHTML=''}else if(product.group==='lanches'){box.innerHTML='<label>Adicionais</label><div class="checks"><label class="check"><input type="checkbox" data-add="Catupiry" data-price="6"> Catupiry + R$ 6,00</label><label class="check"><input type="checkbox" data-add="Cheddar" data-price="6"> Cheddar + R$ 6,00</label><label class="check"><input type="checkbox" data-add="Hambúrguer" data-price="7"> Hambúrguer extra + R$ 7,00</label><label class="check"><input type="checkbox" data-add="Frango" data-price="7"> Frango extra + R$ 7,00</label><label class="check"><input type="checkbox" data-add="Coração" data-price="7"> Coração extra + R$ 7,00</label><label class="check"><input type="checkbox" data-add="Mignon" data-price="7"> Mignon extra + R$ 7,00</label><label class="check"><input type="checkbox" data-add="Calabresa" data-price="7"> Calabresa extra + R$ 7,00</label><label class="check"><input type="checkbox" data-add="Bacon" data-price="7"> Bacon extra + R$ 7,00</label></div>'}else{let s='<label>Adicionais</label><div class="checks">';if(product.name.includes('Batata Frita 1kg'))s+='<label class="check"><input type="checkbox" data-add="Cheddar ou Catupiry" data-price="15"> Cheddar ou Catupiry + R$ 15,00</label>';if(product.name.includes('Batata Frita 500g'))s+='<label class="check"><input type="checkbox" data-add="Cheddar ou Catupiry" data-price="8"> Cheddar ou Catupiry + R$ 8,00</label>';if(!product.name.toLowerCase().includes('batata'))s+='<label class="check"><input type="checkbox" data-add="Carne extra" data-price="20"> Carne extra + R$ 20,00</label>';s+='</div>';box.innerHTML=s}document.getElementById('customModal').classList.add('show')}
+function closeModal(){document.getElementById('customModal').classList.remove('show');modalProduct=null}
+function confirmAdd(){if(!modalProduct)return;const qty=Math.max(1,Number(document.getElementById('modalQty').value||1));const obs=document.getElementById('modalObs').value.trim();const adds=[...document.querySelectorAll('#modalAdds input:checked')].map(x=>({name:x.dataset.add,price:Number(x.dataset.price)}));const addTotal=adds.reduce((s,x)=>s+x.price,0);for(let q=0;q<qty;q++)cart.push({name:modalProduct.name,price:modalProduct.price+addTotal,basePrice:modalProduct.price,adds:adds.map(x=>({...x})),obs});closeModal();renderCart()}
+function renderCart(){
+  let c=document.getElementById('cart');
+  if(!cart.length)c.innerHTML='<p class="muted">Clique nos produtos para adicionar.</p>';
+  else{c.innerHTML='';cart.forEach((x,i)=>{let d=document.createElement('div');d.className='cart-item';
+    let adds=x.adds?.length?'<div class="item-add">+ '+x.adds.map(a=>a.name).join(', ')+'</div>':'';
+    let note=x.obs?'<div class="item-note">📝 '+x.obs+'</div>':'';
+    d.innerHTML='<strong>'+x.name+'</strong>R$ '+br(x.price)+adds+note+'<span class="qty"><button onclick="removeItem('+i+')">−</button><button onclick="duplicateItem('+i+')">+</button><button class="btn light" onclick="removeOne('+i+')">Excluir</button></span>';
+    c.appendChild(d)})}
+  let subtotal=cart.reduce((s,x)=>s+x.price,0),tax=Number(document.getElementById('taxa').value||0),desc=Number(document.getElementById('desconto').value||0);
+  let total=Math.max(0,subtotal+tax-desc);document.getElementById('total').textContent=br(total);updateTroco(total);
+}
+function updateTroco(total){
+  const recebidoEl=document.getElementById('recebido');
+  const trocoEl=document.getElementById('troco');
+  const pagamentoEl=document.getElementById('pagamento');
+  if(!trocoEl)return;
+  const recebido=Number(recebidoEl?.value||0);
+  const pagamento=pagamentoEl?.value||'';
+  const troco=(pagamento==='Dinheiro' && Number.isFinite(recebido))
+    ? Math.max(0,recebido-Number(total||0))
+    : 0;
+  trocoEl.value='R$ '+br(troco);
+}
+
+function duplicateItem(i){cart.push({...cart[i],adds:(cart[i].adds||[]).map(a=>({...a}))});renderCart()}
+function removeItem(i){cart.splice(i,1);renderCart()}
+function itemKey(x){return (x.name||'')+'|'+(x.adds||[]).map(a=>a.name).sort().join(',')+'|'+(x.obs||'')}
+function removeOne(i){const alvo=cart[i];if(!alvo)return;const chave=itemKey(alvo);cart=cart.filter(x=>itemKey(x)!==chave);renderCart()}
+
+function normalizePhone(v){return (v||'').replace(/\D/g,'')}
+function saveCustomers(){localStorage.setItem('lele_customers',JSON.stringify(customers))}
+function buscarClientes(){
+  const q=(document.getElementById('clienteBusca')?.value||'').toLowerCase().trim();
+  const sel=document.getElementById('clienteResultados');if(!sel)return;
+  const arr=customers.filter(c=>!q||((c.nome||'')+' '+(c.telefone||'')).toLowerCase().includes(q)).slice(0,20);
+  sel.innerHTML='<option value="">Selecione um cliente</option>'+arr.map(c=>'<option value="'+c.id+'">'+(c.nome||'Cliente')+' — '+(c.telefone||'sem telefone')+'</option>').join('');
+}
+function selecionarCliente(){
+  const id=Number(document.getElementById('clienteResultados').value||0);
+  const c=customers.find(x=>x.id===id);if(!c)return;
+  document.getElementById('nome').value=c.nome||'';
+  document.getElementById('telefone').value=c.telefone||'';
+  document.getElementById('endereco').value=c.endereco||'';
+  document.getElementById('clienteBusca').value=c.nome||c.telefone||'';
+}
+function renderClients(){
+  const box=document.getElementById('clientsList');if(!box)return;
+  const q=(document.getElementById('buscaClientesLista')?.value||'').toLowerCase().trim();
+  const arr=customers.filter(c=>!q||((c.nome||'')+' '+(c.telefone||'')+' '+(c.endereco||'')).toLowerCase().includes(q));
+  if(!arr.length){box.innerHTML='<p class="muted">Nenhum cliente cadastrado.</p>';return;}
+  box.innerHTML=arr.map(c=>'<div class="order"><div class="order-head"><b>'+c.nome+'</b><span class="badge">'+(c.telefone||'sem telefone')+'</span></div>'+
+    (c.endereco?'<div class="muted">📍 '+c.endereco+'</div>':'')+
+    '<div class="actions no-print" style="margin-top:8px"><button class="btn light" onclick="usarCliente('+c.id+')">Usar em novo pedido</button><button class="btn danger" onclick="excluirCliente('+c.id+')">Excluir cadastro</button></div></div>').join('');
+}
+function usarCliente(id){
+  const c=customers.find(x=>x.id===id);if(!c)return;
+  document.getElementById('nome').value=c.nome||'';document.getElementById('telefone').value=c.telefone||'';document.getElementById('endereco').value=c.endereco||'';
+  showPage('novo',document.querySelector('nav .tab'));window.scrollTo({top:0,behavior:'smooth'});
+}
+function excluirCliente(id){
+  if(!confirm('Excluir este cadastro de cliente?'))return;
+  customers=customers.filter(c=>c.id!==id);saveCustomers();renderClients();buscarClientes();
+}
+
+function limpar(){
+  cart=[]; editingId=null;
+  ['nome','telefone','endereco','obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('taxa').value=0; document.getElementById('desconto').value=0;
+  document.getElementById('recebido').value=0; document.getElementById('troco').value='R$ 0,00';
+  document.getElementById('saveBtn').textContent='Salvar pedido';if(document.getElementById('clienteBusca'))document.getElementById('clienteBusca').value='';if(document.getElementById('clienteResultados'))document.getElementById('clienteResultados').innerHTML='<option value="">Selecione um cliente</option>'; toggleRecebido(); renderCart();
+}
+
+function pedidoNumero(id){
+  const digits=String(id??'').replace(/\D/g,'');
+  return (digits||String(id??'')).slice(-5);
+}
+function persistirPedidos(){
+  localStorage.setItem('lele_orders',JSON.stringify(orders));
+  renderOrders();
+  renderReport();
+}
+function salvarClienteSeguro(dados){
+  try{
+    const phoneKey=normalizePhone(dados.telefone);
+    let c=phoneKey?customers.find(x=>normalizePhone(x.telefone)===phoneKey):null;
+    if(!c&&dados.nome)c=customers.find(x=>(x.nome||'').toLowerCase()===dados.nome.toLowerCase());
+    if(c){
+      c.nome=dados.nome||c.nome;
+      c.telefone=dados.telefone||c.telefone;
+      c.endereco=dados.endereco||c.endereco;
+      c.updatedAt=Date.now();
+    }else if(dados.nome||dados.telefone){
+      customers.unshift({
+        id:Date.now(),
+        nome:dados.nome||'Cliente',
+        telefone:dados.telefone||'',
+        endereco:dados.endereco||'',
+        updatedAt:Date.now()
+      });
+    }
+    localStorage.setItem('lele_customers',JSON.stringify(customers));
+  }catch(e){console.warn('Cadastro do cliente não pôde ser salvo:',e)}
+}
+function salvarPedido(){
+  try{
+    // Recalcula os totais e valida o carrinho sem depender de outras funções.
+    const nomeEl=document.getElementById('nome');
+    const telEl=document.getElementById('telefone');
+    const endEl=document.getElementById('endereco');
+    const tipoEl=document.getElementById('tipo');
+    const pagEl=document.getElementById('pagamento');
+    const obsEl=document.getElementById('obs');
+    const taxaEl=document.getElementById('taxa');
+    const descEl=document.getElementById('desconto');
+    const recEl=document.getElementById('recebido');
+
+    if(!Array.isArray(cart) || cart.length===0){
+      alert('Adicione pelo menos um produto ao pedido.');
+      return false;
+    }
+
+    const dados={
+      nome:(nomeEl?.value||'').trim() || 'Cliente',
+      telefone:(telEl?.value||'').trim(),
+      endereco:(endEl?.value||'').trim(),
+      tipo:tipoEl?.value || 'Entrega',
+      pagamento:pagEl?.value || 'Pix',
+      obs:(obsEl?.value||'').trim()
+    };
+
+    const subtotal=cart.reduce((sum,item)=>{
+      const valor=Number(item.price);
+      return sum+(Number.isFinite(valor)?valor:0);
+    },0);
+
+    const taxa=Math.max(0,Number(taxaEl?.value||0)||0);
+    const desconto=Math.max(0,Number(descEl?.value||0)||0);
+    const total=Math.max(0,subtotal+taxa-desconto);
+    const recebido=Math.max(0,Number(recEl?.value||0)||0);
+    const troco=dados.pagamento==='Dinheiro' ? Math.max(0,recebido-total) : 0;
+
+    const itens=cart.map(item=>({
+      name:String(item.name||'Produto'),
+      price:Number(item.price)||0,
+      basePrice:Number(item.basePrice ?? item.price ?? 0)||0,
+      group:item.group||'',
+      qty:Math.max(1,Number(item.qty||1)),
+      adds:Array.isArray(item.adds)?item.adds.map(a=>({
+        name:String(a.name||''),
+        price:Number(a.price)||0
+      })) : [],
+      obs:String(item.obs||'')
+    }));
+
+    if(editingId!==null && editingId!==undefined && String(editingId)!==''){
+      const targetId=String(editingId);
+      let index=orders.findIndex(o=>String(o.id)===targetId);
+
+      // Compatibilidade com pedidos antigos: procura pelo número visível.
+      if(index===-1){
+        const shortId=targetId.replace(/\D/g,'').slice(-5);
+        index=orders.findIndex(o=>String(o.id).replace(/\D/g,'').slice(-5)===shortId);
+      }
+
+      if(index===-1){
+        alert('Não foi possível localizar o pedido para edição. Nenhum pedido existente foi alterado.');
+        return false;
+      }
+
+      const atual=orders[index];
+      if(atual.status!=='Novo' && atual.status!=='Em preparo'){
+        alert('Este pedido não pode mais ser editado porque está como "'+(atual.status||'')+'".');
+        return false;
+      }
+
+      // Preserva o ID e o horário original; atualiza apenas os dados do pedido.
+      orders[index]={
+        ...atual,
+        id:atual.id,
+        ...dados,
+        subtotal,
+        taxa,
+        desconto,
+        total,
+        recebido,
+        troco,
+        itens,
+        status:atual.status,
+        hora:atual.hora || new Date().toLocaleString('pt-BR')
+      };
+
+      localStorage.setItem('lele_orders',JSON.stringify(orders));
+      if(typeof salvarClienteSeguro==='function') salvarClienteSeguro(dados);
+      if(typeof renderOrders==='function') renderOrders();
+      if(typeof renderReport==='function') renderReport();
+
+      const numero=(String(atual.id).replace(/\D/g,'')||String(atual.id)).slice(-5);
+
+      // Limpa o modo de edição só depois de salvar com sucesso.
+      editingId=null;
+      if(typeof limpar==='function') limpar();
+
+      alert('Pedido #'+numero+' atualizado com sucesso!');
+      return true;
+    }
+
+    // Novo pedido.
+    let newId=String(Date.now());
+    while(orders.some(o=>String(o.id)===newId)) newId=String(Number(newId)+1);
+
+    const pedido={
+      id:newId,
+      ...dados,
+      subtotal,
+      taxa,
+      desconto,
+      total,
+      recebido,
+      troco,
+      itens,
+      status:'Novo',
+      hora:new Date().toLocaleString('pt-BR')
+    };
+
+    orders.unshift(pedido);
+    localStorage.setItem('lele_orders',JSON.stringify(orders));
+    if(typeof salvarClienteSeguro==='function') salvarClienteSeguro(dados);
+    if(typeof renderOrders==='function') renderOrders();
+    if(typeof renderReport==='function') renderReport();
+
+    const numero=(newId.replace(/\D/g,'')||newId).slice(-5);
+    editingId=null;
+    if(typeof limpar==='function') limpar();
+
+    alert('Pedido salvo! Nº '+numero);
+    return true;
+
+  }catch(err){
+    console.error('Erro detalhado ao salvar pedido:',err);
+    alert('O pedido não pôde ser salvo. Verifique o console do navegador se precisar investigar o erro.');
+    return false;
+  }
+}
+const statuses=['Novo','Em preparo','Pronto','Saiu','Entregue'];
+function nextStatus(id){
+  const o=orders.find(x=>String(x.id)===String(id));
+  if(!o)return;
+  const i=statuses.indexOf(o.status);
+  if(i<statuses.length-1){
+    o.status=statuses[i+1];
+    persistirPedidos();
+  }
+}
+function editOrder(id){
+  const pedido=orders.find(o=>String(o.id)===String(id));
+  if(!pedido){
+    // Também tenta localizar pelo número curto mostrado na tela.
+    const curto=pedidoNumero(id);
+    const alternativo=orders.find(o=>pedidoNumero(o.id)===curto);
+    if(alternativo)return editOrder(alternativo.id);
+    alert('Pedido não encontrado. Ele pode ter sido excluído ou ter sido criado em uma versão antiga do sistema.');
+    return;
+  }
+
+  if(!['Novo','Em preparo'].includes(pedido.status)){
+    alert('Este pedido não pode mais ser editado porque está como "'+pedido.status+'".');
+    return;
+  }
+
+  editingId=String(pedido.id);
+
+  const setValue=(id,value)=>{
+    const el=document.getElementById(id);
+    if(el)el.value=value??'';
+  };
+
+  setValue('nome',pedido.nome);
+  setValue('telefone',pedido.telefone);
+  setValue('endereco',pedido.endereco);
+  setValue('tipo',pedido.tipo||'Entrega');
+  setValue('pagamento',pedido.pagamento||'Pix');
+  setValue('obs',pedido.obs);
+  setValue('taxa',pedido.taxa||0);
+  setValue('desconto',pedido.desconto||0);
+  setValue('recebido',pedido.recebido||0);
+
+  cart=(pedido.itens||[]).flatMap(item=>{
+    const qty=Math.max(1,Number(item.qty||1));
+    const copia=()=>({
+      name:item.name,
+      price:Number(item.price||0),
+      basePrice:Number(item.basePrice??item.price??0),
+      group:item.group,
+      adds:(item.adds||[]).map(a=>({name:a.name,price:Number(a.price||0)})),
+      obs:item.obs||''
+    });
+    return Array.from({length:qty},copia);
+  });
+
+  toggleEndereco();
+  toggleRecebido();
+  renderCart();
+
+  const saveBtn=document.getElementById('saveBtn');
+  if(saveBtn){
+    saveBtn.textContent='💾 Salvar alterações';
+    saveBtn.classList.add('primary');
+  }
+
+  const novoTab=[...document.querySelectorAll('.tab')].find(tab=>
+    (tab.getAttribute('onclick')||'').includes("showPage('novo'")
+  );
+  showPage('novo',novoTab||document.querySelector('.tab'));
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function semAcento(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[ºª]/g,'').replace(/[—–]/g,'-')}
+function printOrder(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+
+  const items=(o.itens||[]).map(i=>{
+    const adds=i.adds?.length
+      ?'<div class="item-detail">+ '+semAcento(i.adds.map(a=>a.name).join(', '))+'</div>'
+      :'';
+    const note=i.obs
+      ?'<div class="item-detail"><b>Obs.:</b> '+semAcento(i.obs)+'</div>'
+      :'';
+    return '<div class="pedido-item"><b>'+semAcento(i.name)+'</b>'+adds+note+'</div>';
+  }).join('');
+
+  let pagamento=
+    '<div><b>Pagamento:</b> '+semAcento(o.pagamento||'-')+'</div>'+
+    '<div><b>Taxa de entrega:</b> R$ '+br(o.taxa||0)+'</div>'+
+    '<div><b>Desconto:</b> R$ '+br(o.desconto||0)+'</div>';
+
+  if(o.pagamento==='Dinheiro'&&Number(o.recebido||0)>0){
+    pagamento+=
+      '<div><b>Valor recebido:</b> R$ '+br(o.recebido)+'</div>'+
+      '<div><b>Troco:</b> R$ '+br(o.troco||0)+'</div>';
+  }
+
+  pagamento+='<div class="valor-final"><b>VALOR FINAL: R$ '+br(o.total)+'</b></div>';
+
+  const dataHora=(o.hora||'').split(',');
+  const data=(dataHora[0]||'').trim();
+  const hora=(dataHora.slice(1).join(',')||'').trim();
+
+  const w=window.open('','_blank','width=420,height=720');
+  if(!w){alert('O navegador bloqueou a janela de impressão. Permita pop-ups para imprimir a comanda.');return;}
+
+  w.document.write(
+    '<!doctype html><html><head><meta charset="utf-8"><title>Comanda #'+String(o.id).slice(-5)+'</title>'+
+    '<style>'+
+      '@page{margin:8mm}'+
+      'body{font-family:Arial,sans-serif;width:340px;margin:0 auto;padding:10px;color:#111;font-size:14px;line-height:1.4}'+
+      'h1{text-align:center;font-size:21px;margin:0 0 8px;font-weight:700;letter-spacing:1px}'+
+      '.center{text-align:center}'+
+      'hr{border:none;border-top:1px dashed #111;margin:12px 0}'+
+      '.titulo{font-weight:700;margin-bottom:8px;letter-spacing:.5px}'+
+      '.pedido-item{margin-bottom:10px}'+
+      '.item-detail{font-size:12px;margin-left:12px;margin-top:2px}'+
+      '.valor-final{font-size:16px;margin-top:10px;padding-top:8px;border-top:1px solid #111}'+
+    '</style></head><body>'+
+
+    '<h1>LELE LANCHES</h1>'+
+    '<div class="center">'+
+      '<b>Pedido #'+String(o.id).slice(-5)+'</b><br>'+
+      'Data: '+data+'<br>'+
+      'Horario: '+hora+
+    '</div>'+
+
+    '<hr>'+
+
+    '<div>'+
+      '<b>Cliente:</b> '+semAcento(o.nome||'Cliente')+'<br>'+
+      '<b>Telefone:</b> '+semAcento(o.telefone||'-')+'<br>'+
+      '<b>Tipo:</b> '+semAcento(o.tipo||'-')+
+      (o.endereco&&o.tipo==='Entrega'?'<br><b>Endereco:</b> '+semAcento(o.endereco):'')+
+    '</div>'+
+
+    '<hr>'+
+
+    '<div class="titulo">PEDIDO</div>'+
+    '<div>'+items+'</div>'+
+    (o.obs?'<div style="font-size:12px;margin-top:8px"><b>Obs. geral:</b> '+semAcento(o.obs)+'</div>':'')+
+
+    '<hr>'+
+
+    '<div class="titulo">PAGAMENTO</div>'+
+    '<div>'+pagamento+'</div>'+
+
+    '</body></html>'
+  );
+
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(),150);
+}
+function renderOrders(){
+  const box=document.getElementById('orders');
+  if(!box)return;
+
+  const q=(document.getElementById('busca')?.value||'').toLowerCase().trim();
+  const arr=orders.filter(o=>{
+    const texto=((o.nome||'')+' '+String(o.id)+' '+(o.telefone||'')).toLowerCase();
+    return texto.includes(q);
+  });
+
+  if(!arr.length){
+    box.innerHTML='<p class="muted">Nenhum pedido encontrado.</p>';
+    return;
+  }
+
+  box.innerHTML=arr.map(o=>{
+    const id=String(o.id);
+    const editBtn=(o.status==='Novo'||o.status==='Em preparo')
+      ?'<button type="button" class="btn light js-edit-pedido" data-id="'+id+'">✏️ Editar pedido</button>'
+      :'';
+
+    const itens=(o.itens||[]).map(i=>{
+      const adds=i.adds?.length?' <small>(+ '+i.adds.map(a=>a.name).join(', ')+')</small>':'';
+      const obs=i.obs?' <small>— '+i.obs+'</small>':'';
+      return '<li><b>'+i.name+'</b> — R$ '+br(i.price)+adds+obs+'</li>';
+    }).join('');
+
+    return '<div class="order" data-order-id="'+id+'">'+
+      '<div class="order-head"><b>#'+pedidoNumero(id)+' — '+(o.nome||'Cliente')+'</b><span class="badge">'+o.status+'</span></div>'+
+      '<div class="muted">'+(o.hora||'')+' · '+(o.tipo||'')+' · '+(o.pagamento||'')+'</div>'+
+      '<ul>'+itens+'</ul>'+
+      '<b>Total: R$ '+br(o.total)+'</b>'+
+      (o.endereco?'<div class="muted">📍 '+o.endereco+'</div>':'')+
+      (o.obs?'<div class="muted">📝 '+o.obs+'</div>':'')+
+      '<div class="actions order-actions no-print" style="margin-top:9px">'+
+        editBtn+
+        '<button type="button" class="btn primary js-next-status" data-id="'+id+'">Avançar status</button>'+
+        '<button type="button" class="btn light js-print-pedido" data-id="'+id+'">🖨 Imprimir</button>'+
+        '<button type="button" class="btn danger js-delete-pedido" data-id="'+id+'">🗑️ Excluir</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function delOrder(id){
+  const antes=orders.length;
+  orders=orders.filter(o=>String(o.id)!==String(id));
+  if(orders.length!==antes)persistirPedidos();
+}
+function apagarTodos(){
+  if(confirm('Apagar todos os pedidos?')){
+    orders=[];
+    persistirPedidos();
+  }
+}
+function renderReport(){let today=new Date().toLocaleDateString('pt-BR'),a=orders.filter(o=>o.hora.startsWith(today));let fat=a.reduce((s,o)=>s+o.total,0);document.getElementById('sPedidos').textContent=a.length;document.getElementById('sFat').textContent='R$ '+br(fat);document.getElementById('sTicket').textContent='R$ '+br(a.length?fat/a.length:0);document.getElementById('sPrep').textContent=a.filter(o=>o.status==='Em preparo').length;let m={};a.forEach(o=>m[o.pagamento]=(m[o.pagamento]||0)+o.total);document.getElementById('pagResumo').innerHTML=Object.keys(m).map(k=>'<p><b>'+k+':</b> R$ '+br(m[k])+'</p>').join('')||'<p class="muted">Nenhuma venda hoje.</p>'}
+
+document.getElementById('orders').addEventListener('click',function(e){
+  const btn=e.target.closest('button[data-id]');
+  if(!btn)return;
+  const id=btn.dataset.id;
+  if(btn.classList.contains('js-edit-pedido')){
+    editOrder(id);
+  }else if(btn.classList.contains('js-next-status')){
+    nextStatus(id);
+  }else if(btn.classList.contains('js-print-pedido')){
+    printOrder(id);
+  }else if(btn.classList.contains('js-delete-pedido')){
+    delOrder(id);
+  }
+});
+
+setGroup('lanches');renderCart();renderOrders();renderReport();renderClients();renderMenuEditor();buscarClientes();toggleEndereco();toggleRecebido();
+</script>
+</body>
+</html>
